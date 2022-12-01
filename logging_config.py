@@ -5,7 +5,6 @@ import functools
 import logging
 
 
-print('log')
 log = logging.getLogger(__name__)
 
 
