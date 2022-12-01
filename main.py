@@ -42,6 +42,8 @@ def resume_or_new_params(**new_params: Any) -> dict[str, Any]:
         return new_params
 
     content = file.read_text()
+    if not content:
+        return new_params
     params = json.loads(content)
     if file.exists():
         answer = input(f"There is unfinished session with following params:\n{content}.\n"

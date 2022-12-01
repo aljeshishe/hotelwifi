@@ -3,13 +3,11 @@ import threading
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
-from queue import Queue
-from typing import Callable
+from contextlib import suppress
+from queue import Queue, Empty
 
-import tqdm
-
-from results import Results
 from passwords import Passwords
+from results import Results
 from session import Session
 
 log = logging.getLogger(__name__)
@@ -26,7 +24,6 @@ class Processor:
             self.sessions.put(Session(mac_address=params.mac_address))
 
     def _run(self, password: str) -> (str, int):
-        print(password)
         start = time.time()
         exception = None
         for i in range(self.RETRIES):
@@ -45,7 +42,6 @@ class Processor:
         return password, time.time() - start
 
     def _results_consumer(self, futures):
-        print("_results_consumer")
         while fut := futures.get():
             try:
                 result = fut.result()
@@ -67,8 +63,9 @@ class Processor:
                     futures.put(pool.submit(self._run, password=password))
 
             except KeyboardInterrupt:
-                print("KeyboardInterrupt")
-                while not pool._work_queue.empty():
-                    pool._work_queue.get_nowait()
+                log.warning("Ctrl+C pressed, exiting")
+                while not futures.empty():
+                    with suppress(Empty):
+                        futures.get_nowait().cancel()
                 pool.shutdown(wait=False)
                 raise
